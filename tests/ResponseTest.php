@@ -31,21 +31,21 @@ class ResponseTest extends PHPUnit_Framework_TestCase
 
 	public function testStatus()
 	{
-		$response = new Response($this->createResponse());
+		$response = new Response('http://example.com', $this->createResponse());
 
 		$this->assertInternalType('integer', $response->getStatus());
 	}
 
 	public function testType()
 	{
-		$response = new Response($this->createResponse());
+		$response = new Response('http://example.com', $this->createResponse());
 
 		$this->assertEquals('text/html', $response->getType());
 	}
 
 	public function testHeader()
 	{
-		$response = new Response($this->createResponse(200, 'OK', [
+		$response = new Response('http://example.com', $this->createResponse(200, 'OK', [
 			'Content-Type' => 'text/html'
 			,'Vary' => 'User-Agent'
 		]));
@@ -55,14 +55,14 @@ class ResponseTest extends PHPUnit_Framework_TestCase
 
 	public function testHTMLResponse()
 	{
-		$response = new Response($this->createResponse());
+		$response = new Response('http://example.com', $this->createResponse());
 
 		$this->assertInstanceOf('Symfony\\Component\\DomCrawler\\Crawler', $response->getBody());
 	}
 
 	public function testJSONResponse()
 	{
-		$response = new Response($this->createResponse(200, '{
+		$response = new Response('http://example.com', $this->createResponse(200, '{
 			"status": "OK"
 		}', [
 			'Content-Type' => 'application/json'
@@ -73,10 +73,28 @@ class ResponseTest extends PHPUnit_Framework_TestCase
 
 	public function testOtherResponse()
 	{
-		$response = new Response($this->createResponse(200, 'OK', [
+		$response = new Response('http://example.com', $this->createResponse(200, 'OK', [
 			'Content-Type' => 'plain/text'
 		]));
 
 		$this->assertInternalType('string', $response->getBody());
+	}
+
+	public function testDetectRedirect()
+	{
+		$mock = $this->getMockBuilder('GuzzleHttp\Message\Response')
+				->disableOriginalConstructor()
+				->setMethods([
+					'getEffectiveURL'
+				])
+				->getMock();
+
+		$mock->expects($this->once())
+			 ->method('getEffectiveURL')
+			 ->willReturn('http://example.com/redirected');
+
+		$response = new Response('http://example.com', $mock);
+
+		$this->assertTrue($response->isRedirected());
 	}
 }

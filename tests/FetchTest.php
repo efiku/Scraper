@@ -124,4 +124,12 @@ class FetchTest extends PHPUnit_Framework_TestCase
 
 		$scraper->fetch();
 	}
+
+	
+	public function testURIValidation()
+	{
+		$this->assertTrue(Scraper::checkURI('ftp://whatever.dot'));
+
+		$this->assertFalse(Scraper::checkURI('invalid-URI'));
+	}
 }

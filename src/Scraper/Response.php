@@ -19,6 +19,13 @@ use Symfony\Component\DomCrawler\Crawler;
 class Response
 {
 	/**
+	 * Stores requested URI
+	 *
+	 * @var string
+	 */
+	private $URI;
+
+	/**
 	 * Stores original response from Guzzle
 	 *
 	 * @var Resource
@@ -28,11 +35,28 @@ class Response
 	/**
 	 * Constructs scraper's response
 	 *
+	 * @param $URI    string    requested URI
 	 * @param $resource    Resource    original Guzzle's response
 	 */
-	public function __construct(Resource $resource)
+	public function __construct($URI, Resource $resource)
 	{
+		$this->URI = $URI;
+
 		$this->resource = $resource;
+	}
+
+	/**
+	 * Get URI
+	 *
+	 * @param $real    boolean   if method should return real URI, otherwise it returns requested URI
+	 * @return string
+	 */
+	public function getURI($real = false)
+	{
+		if($real)
+			return $this->resource->getEffectiveURL();
+
+		return $this->URI;
 	}
 
 	/**
@@ -76,6 +100,16 @@ class Response
 	public function getBody()
 	{
 		return $this->parseBody();
+	}
+
+	/**
+	 * Checks if request was redirected
+	 *
+	 * @return boolean
+	 */
+	public function isRedirected()
+	{
+		return mb_strtolower($this->getURI()) !== mb_strtolower($this->getURI(true));
 	}
 
 
