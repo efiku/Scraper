@@ -15,8 +15,6 @@ use GuzzleHttp\Client as Curl;
 use GuzzleHttp\Exception\RequestException;
 use Auditr\Scraper\Response;
 use Auditr\Scraper\Exception;
-use Auditr\Scraper\Exception\HTTP403;
-use Auditr\Scraper\Exception\HTTP404;
 
 class Scraper
 {
@@ -46,6 +44,17 @@ class Scraper
 		$this->URI = $URI;
 
 		$this->curl = new Curl();
+	}
+
+	/**
+	 * Replaces original cURL
+	 *
+	 * @param $curl    Curl   Curl instance
+	 * @return void
+	 */
+	public function setCurl(Curl $curl)
+	{
+		$this->curl = $curl;
 	}
 
 	/**

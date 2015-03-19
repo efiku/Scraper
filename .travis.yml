@@ -8,3 +8,7 @@ install:
   - composer install
 script:
   - composer test
+
+matrix:
+  allow_failures:
+    - php: nightly

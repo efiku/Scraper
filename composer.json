@@ -1,4 +1,7 @@
 {
+    "name": "auditr/scraper",
+    "description": "Simple websites' scraper",
+    "license": "MIT",
     "require": {
         "guzzlehttp/guzzle": "~5.2",
         "symfony/dom-crawler": "~2.6",
