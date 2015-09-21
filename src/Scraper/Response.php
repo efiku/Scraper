@@ -18,120 +18,122 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class Response
 {
-	/**
-	 * Stores requested URI
-	 *
-	 * @var string
-	 */
-	private $URI;
+    /**
+     * Stores requested URI
+     *
+     * @var string
+     */
+    private $URI;
 
-	/**
-	 * Stores original response from Guzzle
-	 *
-	 * @var Resource
-	 */
-	private $resource;
+    /**
+     * Stores original response from Guzzle
+     *
+     * @var Resource
+     */
+    private $resource;
 
-	/**
-	 * Constructs scraper's response
-	 *
-	 * @param $URI    string    requested URI
-	 * @param $resource    Resource    original Guzzle's response
-	 */
-	public function __construct($URI, Resource $resource)
-	{
-		$this->URI = $URI;
+    /**
+     * Constructs scraper's response
+     *
+     * @param $URI    string    requested URI
+     * @param $resource  \GuzzleHttp\Message\Response  original Guzzle's response
+     */
+    public function __construct($URI, Resource $resource)
+    {
+        $this->URI = $URI;
+        $this->resource = $resource;
+    }
 
-		$this->resource = $resource;
-	}
+    /**
+     * Get status code of resource
+     *
+     * @return integer
+     */
+    public function getStatus()
+    {
+        return $this->resource->getStatusCode();
+    }
 
-	/**
-	 * Get URI
-	 *
-	 * @param $real    boolean   if method should return real URI, otherwise it returns requested URI
-	 * @return string
-	 */
-	public function getURI($real = false)
-	{
-		if($real)
-			return $this->resource->getEffectiveURL();
+    /**
+     * Get parsed body of response
+     *
+     * @return Crawler | array | string
+     */
+    public function getBody()
+    {
+        return $this->parseBody();
+    }
 
-		return $this->URI;
-	}
+    /**
+     * Parse body of response
+     *
+     * @return Crawler | array | string
+     */
+    private function parseBody()
+    {
+        $type = $this->getType();
+        $body = (string)$this->resource->getBody();
 
-	/**
-	 * Get status code of resource
-	 *
-	 * @return integer
-	 */
-	public function getStatus()
-	{
-		return $this->resource->getStatusCode();
-	}
+        if (!$body) {
+            return '';
+        }
 
-	/**
-	 * Get header
-	 *
-	 * @param $header    string    header's name
-	 * @return array
-	 */
-	public function getHeader($header)
-	{
-		return Request::parseHeader($this->resource, $header);
-	}
+        if (in_array($type, ['text/html', 'text/xml'])) {
+            return new Crawler($body);
+        }
 
-	/**
-	 * Get type of response
-	 *
-	 * @return string
-	 */
-	public function getType()
-	{
-		$type = $this->getHeader('Content-Type');
-		
-		return $type[0][0];
-	}
+        if ($type === 'application/json') {
+            return $this->resource->json();
+        }
 
-	/**
-	 * Get parsed body of response
-	 *
-	 * @return Crawler | array | string
-	 */
-	public function getBody()
-	{
-		return $this->parseBody();
-	}
+        return $body;
+    }
 
-	/**
-	 * Checks if request was redirected
-	 *
-	 * @return boolean
-	 */
-	public function isRedirected()
-	{
-		return mb_strtolower($this->getURI()) !== mb_strtolower($this->getURI(true));
-	}
+    /**
+     * Get type of response
+     *
+     * @return string
+     */
+    public function getType()
+    {
+        $type = $this->getHeader('Content-Type');
 
+        return $type[0][0];
+    }
 
-	/**
-	 * Parse body of response
-	 *
-	 * @return Crawler | array | string
-	 */
-	private function parseBody()
-	{
-		$type = $this->getType();
-		$body = (string)$this->resource->getBody();
+    /**
+     * Get header
+     *
+     * @param $header    string    header's name
+     * @return array
+     */
+    public function getHeader($header)
+    {
+        return Request::parseHeader($this->resource, $header);
+    }
 
-		if(!$body)
-			return '';
+    /**
+     * Checks if request was redirected
+     *
+     * @return boolean
+     */
+    public function isRedirected()
+    {
+        return mb_strtolower($this->getURI()) !== mb_strtolower($this->getURI(true));
+    }
 
-		if(in_array($type, ['text/html', 'text/xml']))
-			return new Crawler($body);
+    /**
+     * Get URI
+     *
+     * @param $real    boolean   if method should return real URI, otherwise it returns requested URI
+     * @return string
+     */
+    public function getURI($real = false)
+    {
+        if ($real) {
+            return $this->resource->getEffectiveURL();
+        }
 
-		if($type === 'application/json')
-			return $this->resource->json();
-
-		return $body;
-	}
+        return $this->URI;
+    }
 }

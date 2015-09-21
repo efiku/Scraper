@@ -6,130 +6,134 @@ use GuzzleHttp\Exception\RequestException;
 
 class FetchTest extends PHPUnit_Framework_TestCase
 {
-	private $factory;
+    private $factory;
 
-	public function setUp()
-	{
-		$this->factory = new MessageFactory();
-	}
+    public function setUp()
+    {
+        $this->factory = new MessageFactory();
+    }
 
-	private function createRequest($method = 'GET', $url = 'http://example.com')
-	{
-		return $this->factory->createRequest($method, $url);
-	}
+    public function testCorrectFetch()
+    {
+        $scraper = new Scraper('https://comandeer.pl');
 
-	private function createResponse($status = 200, $body = 'OK', array $headers = ['Content-Type' => 'text/html'])
-	{
-		return $this->factory->createResponse($status, $headers, $body);
-	}
+        $curl = $this->getMockBuilder('GuzzleHttp\\Client')
+            ->setMethods([
+                'get'
+            ])
+            ->getMock();
 
-	private function createException($status = 404, $msg = '')
-	{
-		return new RequestException('', $this->createRequest(), $this->createResponse($status));
-	}
+        $curl->expects($this->once())
+            ->method('get')
+            ->willReturn($this->createResponse());
 
-	public function testCorrectFetch()
-	{
-		$scraper = new Scraper('https://comandeer.pl');
+        $scraper->setCurl($curl);
 
-		$curl = $this->getMockBuilder('GuzzleHttp\\Client')
-				->setMethods([
-					'get'
-				])
-				->getMock();
+        $result = $scraper->fetch();
 
-		$curl->expects($this->once())
-			 ->method('get')
-			 ->willReturn($this->createResponse());
+        $this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
+    }
 
-		$scraper->setCurl($curl);
+    private function createResponse($status = 200, $body = 'OK', array $headers = ['Content-Type' => 'text/html'])
+    {
+        return $this->factory->createResponse($status, $headers, $body);
+    }
 
-		$result = $scraper->fetch();
+    public function testHeadMethod()
+    {
+        $scraper = new Scraper('https://comandeer.pl');
 
-		$this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
-	}
+        $curl = $this->getMockBuilder('GuzzleHttp\\Client')
+            ->setMethods([
+                'head'
+            ])
+            ->getMock();
 
-	public function testHeadMethod()
-	{
-		$scraper = new Scraper('https://comandeer.pl');
+        $curl->expects($this->once())
+            ->method('head')
+            ->willReturn($this->createResponse());
 
-		$curl = $this->getMockBuilder('GuzzleHttp\\Client')
-				->setMethods([
-					'head'
-				])
-				->getMock();
+        $scraper->setCurl($curl);
 
-		$curl->expects($this->once())
-			 ->method('head')
-			 ->willReturn($this->createResponse());
+        $result = $scraper->fetch('head');
 
-		$scraper->setCurl($curl);
+        $this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
+    }
 
-		$result = $scraper->fetch('head');
+    /**
+     * @expectedException Auditr\Scraper\Exception
+     */
+    public function testUnkownMethod()
+    {
+        $scraper = new Scraper('https://comandeer.pl');
+        $result = $scraper->fetch('hublabubla');
 
-		$this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
-	}
+        $this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
+    }
 
-	/**
-	 * @expectedException Auditr\Scraper\Exception
-	 */
-	public function testUnkownMethod()
-	{
-		$scraper = new Scraper('https://comandeer.pl');
-		$result = $scraper->fetch('hublabubla');
+    /**
+     * @expectedException Auditr\Scraper\Exception\HTTP404
+     */
+    public function test404Error()
+    {
+        $scraper = new Scraper('https://comandeer.pl/nieistnieje');
 
-		$this->assertInstanceOf('Auditr\\Scraper\\Response', $result);
-	}
+        $curl = $this->getMockBuilder('GuzzleHttp\\Client')
+            ->setMethods([
+                'get'
+            ])
+            ->getMock();
 
-	/**
-	 * @expectedException Auditr\Scraper\Exception\HTTP404
-	 */
-	public function test404Error()
-	{
-		$scraper = new Scraper('https://comandeer.pl/nieistnieje');
+        $curl->expects($this->once())
+            ->method('get')
+            ->will($this->throwException($this->createException()));
 
-		$curl = $this->getMockBuilder('GuzzleHttp\\Client')
-				->setMethods([
-					'get'
-				])
-				->getMock();
+        $scraper->setCurl($curl);
 
-		$curl->expects($this->once())
-			 ->method('get')
-			 ->will($this->throwException($this->createException()));
+        $scraper->fetch();
+    }
 
-		$scraper->setCurl($curl);
+    private function createException($status = 404, $msg = '')
+    {
+        return new RequestException('', $this->createRequest(), $this->createResponse($status));
+    }
 
-		$scraper->fetch();
-	}
+    private function createRequest($method = 'GET', $url = 'http://example.com')
+    {
+        return $this->factory->createRequest($method, $url);
+    }
 
-	/**
-	 * @expectedException Auditr\Scraper\Exception\HTTP403
-	 */
-	public function test403Error()
-	{
-		$scraper = new Scraper('http://bzdety.comandeer.pl/scraper403');
+    /**
+     * @expectedException Auditr\Scraper\Exception\HTTP403
+     */
+    public function test403Error()
+    {
+        $scraper = new Scraper('http://bzdety.comandeer.pl/scraper403');
 
-		$curl = $this->getMockBuilder('GuzzleHttp\\Client')
-				->setMethods([
-					'get'
-				])
-				->getMock();
+        $curl = $this->getMockBuilder('GuzzleHttp\\Client')
+            ->setMethods([
+                'get'
+            ])
+            ->getMock();
 
-		$curl->expects($this->once())
-			 ->method('get')
-			 ->will($this->throwException($this->createException(403)));
+        $curl->expects($this->once())
+            ->method('get')
+            ->will($this->throwException($this->createException(403)));
 
-		$scraper->setCurl($curl);
+        $scraper->setCurl($curl);
 
-		$scraper->fetch();
-	}
+        $scraper->fetch();
+    }
 
-	
-	public function testURIValidation()
-	{
-		$this->assertTrue(Scraper::checkURI('ftp://whatever.dot'));
 
-		$this->assertFalse(Scraper::checkURI('invalid-URI'));
-	}
+    public function testURIValidation()
+    {
+        $this->assertTrue(Scraper::checkURI('ftp://whatever.dot'));
+        $this->assertTrue(Scraper::checkURI('https://wp.pl/'));
+
+        $this->assertFalse(Scraper::checkURI('invalid-URI'));
+        $this->assertFalse(Scraper::checkURI('https://-a/.plURI'));
+        $this->assertFalse(Scraper::checkURI('httpx:/1.com/a'));
+
+    }
 }

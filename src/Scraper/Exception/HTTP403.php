@@ -12,4 +12,7 @@ namespace Auditr\Scraper\Exception;
 
 use Exception;
 
-class HTTP403 extends Exception {}
+class HTTP403 extends Exception
+{
+
+}

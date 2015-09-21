@@ -6,95 +6,98 @@ use GuzzleHttp\Exception\RequestException;
 
 class ResponseTest extends PHPUnit_Framework_TestCase
 {
-	private $factory;
+    private $factory;
 
-	public function setUp()
-	{
-		$this->factory = new MessageFactory();
-	}
+    public function setUp()
+    {
+        $this->factory = new MessageFactory();
+    }
 
-	private function createRequest($method = 'GET', $url = 'http://example.com')
-	{
-		return $this->factory->createRequest($method, $url);
-	}
+    public function testStatus()
+    {
+        $response = new Response('http://example.com', $this->createResponse());
 
-	private function createResponse($status = 200, $body = 'OK', array $headers = ['Content-Type' => 'text/html;charset=UTF-8'])
-	{
-		return $this->factory->createResponse($status, $headers, $body);
-	}
+        $this->assertInternalType('integer', $response->getStatus());
+    }
 
-	private function createException($status = 404, $msg = '')
-	{
-		return new RequestException('', $this->createRequest(), $this->createResponse($status));
-	}
+    public function testType()
+    {
+        $response = new Response('http://example.com', $this->createResponse());
 
+        $this->assertEquals('text/html', $response->getType());
+    }
 
-	public function testStatus()
-	{
-		$response = new Response('http://example.com', $this->createResponse());
+    public function testHeader()
+    {
+        $response = new Response('http://example.com', $this->createResponse(200, 'OK', [
+            'Content-Type' => 'text/html'
+            ,
+            'Vary' => 'User-Agent'
+        ]));
 
-		$this->assertInternalType('integer', $response->getStatus());
-	}
+        $this->assertInternalType('array', $response->getHeader('Vary'));
+    }
 
-	public function testType()
-	{
-		$response = new Response('http://example.com', $this->createResponse());
+    public function testHTMLResponse()
+    {
+        $response = new Response('http://example.com', $this->createResponse());
 
-		$this->assertEquals('text/html', $response->getType());
-	}
+        $this->assertInstanceOf('Symfony\\Component\\DomCrawler\\Crawler', $response->getBody());
+    }
 
-	public function testHeader()
-	{
-		$response = new Response('http://example.com', $this->createResponse(200, 'OK', [
-			'Content-Type' => 'text/html'
-			,'Vary' => 'User-Agent'
-		]));
+    public function testJSONResponse()
+    {
+        $response = new Response('http://example.com', $this->createResponse(200, '{
+            "status": "OK"
+        }', [
+            'Content-Type' => 'application/json'
+        ]));
 
-		$this->assertInternalType('array', $response->getHeader('Vary'));
-	}
+        $this->assertInternalType('array', $response->getBody());
+    }
 
-	public function testHTMLResponse()
-	{
-		$response = new Response('http://example.com', $this->createResponse());
+    public function testOtherResponse()
+    {
+        $response = new Response('http://example.com', $this->createResponse(200, 'OK', [
+            'Content-Type' => 'plain/text'
+        ]));
 
-		$this->assertInstanceOf('Symfony\\Component\\DomCrawler\\Crawler', $response->getBody());
-	}
+        $this->assertInternalType('string', $response->getBody());
+    }
 
-	public function testJSONResponse()
-	{
-		$response = new Response('http://example.com', $this->createResponse(200, '{
-			"status": "OK"
-		}', [
-			'Content-Type' => 'application/json'
-		]));
+    public function testDetectRedirect()
+    {
+        $mock = $this->getMockBuilder('GuzzleHttp\Message\Response')
+            ->disableOriginalConstructor()
+            ->setMethods([
+                'getEffectiveURL'
+            ])
+            ->getMock();
 
-		$this->assertInternalType('array', $response->getBody());
-	}
+        $mock->expects($this->once())
+            ->method('getEffectiveURL')
+            ->willReturn('http://example.com/redirected');
 
-	public function testOtherResponse()
-	{
-		$response = new Response('http://example.com', $this->createResponse(200, 'OK', [
-			'Content-Type' => 'plain/text'
-		]));
+        $response = new Response('http://example.com', $mock);
 
-		$this->assertInternalType('string', $response->getBody());
-	}
+        $this->assertTrue($response->isRedirected());
+    }
 
-	public function testDetectRedirect()
-	{
-		$mock = $this->getMockBuilder('GuzzleHttp\Message\Response')
-				->disableOriginalConstructor()
-				->setMethods([
-					'getEffectiveURL'
-				])
-				->getMock();
+    private function createException($status = 404, $msg = '')
+    {
+        return new RequestException('', $this->createRequest(), $this->createResponse($status));
+    }
 
-		$mock->expects($this->once())
-			 ->method('getEffectiveURL')
-			 ->willReturn('http://example.com/redirected');
+    private function createRequest($method = 'GET', $url = 'http://example.com')
+    {
+        return $this->factory->createRequest($method, $url);
+    }
 
-		$response = new Response('http://example.com', $mock);
-
-		$this->assertTrue($response->isRedirected());
-	}
+    private function createResponse(
+        $status = 200,
+        $body = 'OK',
+        array $headers = ['Content-Type' => 'text/html;charset=UTF-8']
+    ) {
+        return $this->factory->createResponse($status, $headers, $body);
+    }
 }
